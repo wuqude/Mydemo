@@ -1,148 +1,118 @@
 <template>
   <div>
+    
     <!-- Header 区域 -->
-    <van-nav-bar
-      fixed
-      title="文章详情"
-      left-arrow
-      @click-left="$router.back()"
-    />
+    <van-nav-bar fixed title="文章详情" left-arrow @click-left="$router.back()" />
+<van-loading color="#1989fa" class="loading" v-if="Object.keys(detailList).length === 0" >文章疯狂加载ing...</van-loading>
 
-    <!-- 文章--等待加载中 -->
-    <van-loading color="#1989fa" v-if="Object.keys(artObj).length === 0">
-      文章加载ing...
-    </van-loading>
+    <!-- 文章信息区域 -->
+    <div class="article-container" v-else>
+      <!-- 文章标题 -->
+      <h1 class="art-title">{{detailList.title}}</h1>
 
-    <div v-else>
-      <!-- 文章信息区域 -->
-      <div class="article-container">
-        <!-- 文章标题 -->
-        <h1 class="art-title">{{ artObj.title }}</h1>
+      <!-- 用户信息 -->
+      <van-cell center :title="detailList.aut_name" :label="formatDate(detailList.pubdate)">
+        <template #icon>
+          <img :src="detailList.aut_photo" alt="" class="avatar">
+        </template>
+        <template #default>
+          <div>
+            <van-button type="info" size="mini"  v-if="detailList.is_followed===true" @click="followedFn(true)" >已关注</van-button>
+            <van-button icon="plus" type="info" size="mini" plain v-else @click="followedFn(false)">关注</van-button>
+          </div>
+        </template>
+      </van-cell>
 
-        <!-- 用户信息 -->
-        <van-cell center :title="artObj.aut_name" :label="formatDate(artObj.pubdate)">
-          <template #icon>
-            <img :src="artObj.aut_photo" alt="" class="avatar" />
-          </template>
-          <template #default>
-            <div>
-              <van-button type="info" size="mini" v-if="artObj.is_followed === true"
-              @click="followedFn(true)"
-              >已关注</van-button>
-              <van-button icon="plus" type="info" size="mini" plain v-else
-              @click="followedFn(false)"
-                >关注</van-button
-              >
-            </div>
-          </template>
-        </van-cell>
+      <!-- 分割线 -->
+      <van-divider></van-divider>
 
-        <!-- 分割线 -->
-        <van-divider></van-divider>
+      <!-- 文章内容 -->
+      <div class="art-content"  v-html="detailList.content"> </div>
 
-        <!-- 文章内容 -->
-        <div class="art-content" v-html="artObj.content"></div>
+      <!-- 分割线 -->
+      <van-divider>End</van-divider>
 
-        <!-- 分割线 -->
-        <van-divider>End</van-divider>
-
-        <!-- 点赞(文章) -->
-        <!-- attitude:  -1: 无态度，0-不喜欢，1-点赞 -->
-        <div class="like-box">
-          <van-button icon="good-job" type="danger" size="small"
-          v-if="artObj.attitude === 1"
-          @click="loveFn(true)"
-            >已点赞</van-button
-          >
-          <van-button icon="good-job-o" type="danger" plain size="small"
-          v-else
-          @click="loveFn(false)"
-            >点赞</van-button
-          >
-        </div>
-      </div>
-
-      <!-- 文章评论部分 -->
-      <div>
-        <CommentList></CommentList>
+      <!-- 点赞 -->
+      <div class="like-box">
+        <van-button icon="good-job" type="danger" size="small"  v-if="detailList.attitude === 1" @click="likeFn(true)">已点赞</van-button>
+        <van-button icon="good-job-o" type="danger" plain size="small" @click="likeFn(false)" v-else>点赞</van-button>
       </div>
     </div>
+ <!-- 文章加载中... -->
 
+      <!-- 文章评论区域 -->
+    <CommentList></CommentList>    
   </div>
 </template>
-
-<script>
-import { detailAPI, userFollowedAPI, userUnFollowedAPI, likeArticleAPI, unLikeArticleAPI } from '@/api'
-import { timeAgo } from '@/utils/date.js'
+ <script>
+import {detailAPI,userFollowedAPI,userUnFollowedAPI,likeArticleAPI,unLikeArticleAPI} from '../../api/ArticleDetail'
+import {timeAgo} from '../../utils/date'
 import CommentList from './CommentList.vue'
 export default {
-  name: 'Detail',
-  data () {
-    return {
-      artObj: {} // 文章对象
-    }
-  },
-  async created () {
-    const res = await detailAPI({
-      artId: this.$route.query.art_id
-    })
-    console.log(res)
-    this.artObj = res.data.data
-  },
-  methods: {
-    formatDate: timeAgo,
-    // 关注/取关 -> 作者
-    // 注意: 每个登录的手机号, 都维护着自己的关注列表
-    // 强烈建议: 重新用自己手机号登录, 不要都用138888888, 会互相影响
-    async followedFn (bool) {
-      if (bool === true) {
-        // 用户点在 "已关注" 按钮上
-        // 页面   ->  显示关注按钮
-        this.artObj.is_followed = false
-        // 业务   ->  取关
-        // 调接口 ->  取关接口
-        const res = await userUnFollowedAPI({
-          userId: this.artObj.aut_id
-        })
-        console.log(res)
-      } else {
-        // 用户点在 "关注" 按钮上
-        // 页面   ->  显示已关注按钮
-        this.artObj.is_followed = true
-        // 业务和接口 -> 关注接口
-        const res = await userFollowedAPI({
-          userId: this.artObj.aut_id
-        })
-        console.log(res)
-      }
-    },
-    // 点赞/取消点赞 -> 文章
-    async loveFn (bool) {
-      if (bool === true) {
-        // 用户点在了 "已点赞" 身上
-        // 显示"点赞"按钮
-        this.artObj.attitude = 0 // 0不喜欢, -1无态度
-        // 业务接口 -> 取消点赞
-        const res = await unLikeArticleAPI({
-          artId: this.artObj.art_id
-        })
-        console.log(res)
-      } else {
-        this.artObj.attitude = 1
-        const res = await likeArticleAPI({
-          artId: this.artObj.art_id
-        })
-        console.log(res)
-      }
-    }
-  },
-  components: {
-    CommentList
+name:'ArticleDetail',
+data() {
+  return {
+    detailList:{}
   }
-}
+},
+components:{
+CommentList
+},
+mounted() {
+  this.getdetail()
+},
+methods: {
+ async getdetail(){
+    const res =await detailAPI({
+    artId:this.$route.query.aid
+    })
+    
+    this.detailList=res.data.data
+    
+  },
+  formatDate: timeAgo,
+  async followedFn(bool){
+     if (bool === true) { // 用户点了关注按钮
+            // 业务: 关注用户
+            // 显示: 已关注按钮
+            const res = await userUnFollowedAPI({
+          userId: this.detailList.aut_id
+        })
+            this.detailList.is_followed = false
+            
+        } else { // 用户点了已关注按钮身上
+            // 业务: 取消关注用户
+            // 显示: 关注按钮
+            const res = await userFollowedAPI({
+          userId: this.detailList.aut_id
+        })
+            this.detailList.is_followed = true
+            
+        }
+},
+
+ async likeFn(bool){
+  // 判断如果是已点赞,再点击就取消点赞,并且发送取消点赞的api
+  // 如果是未点赞,再点击就点赞,并取消点赞
+  if (bool) {
+        const res = await unLikeArticleAPI({
+          artId: this.detailList.art_id
+        })
+    this.detailList.attitude = 0
+  }else{
+     const res = await likeArticleAPI({
+          artId: this.detailList.art_id
+        })
+    this.detailList.attitude = 1
+  }
+ },
+
+
+}}
 </script>
 
 <style scoped lang="less">
+
 .article-container {
   padding: 10px;
   margin-top: 46px;
@@ -159,13 +129,13 @@ export default {
   width: 100%;
   overflow-x: scroll;
   word-break: break-all;
-  /deep/ img {
-    width: 100%;
-  }
-  /deep/ pre {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
+    /deep/ img{
+    	width: 100%;
+  	}
+    /deep/ pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
 }
 
 .van-cell {
@@ -192,6 +162,6 @@ export default {
 // 加载中居中样式
 .van-loading{
   text-align: center;
-  padding-top: 46px;
+  padding-top: 75%;
 }
 </style>

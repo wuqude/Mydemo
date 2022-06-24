@@ -3,93 +3,72 @@
     <!-- 搜索页面头部 -->
     <div class="search-header">
       <!-- 后退按钮 -->
-      <van-icon
-        name="arrow-left"
-        color="white"
-        size="0.48rem"
-        class="goback"
-        @click="$router.back()"
-      />
+      <van-icon name="arrow-left" color="white" size="0.48rem" class="goback" @click="$router.back()"/>
       <!-- 搜索组件 -->
-      <!-- 组件内会给原生input标签, 绑定keypress-按键事件
-        $emit('search')
-       -->
-      <van-search
-        v-model.trim="kw"
-        v-fofo
-        placeholder="请输入搜索关键词"
-        background="#007BFF"
-        shape="round"
-        @input="inputFn"
-        @search="searchFn"
-      />
+      <van-search v-model="kw"
+       v-fofo placeholder="请输入搜索关键词" background="#007BFF" shape="round"
+        @input="inpuFn"
+        @search='SearchTo'
+        />
     </div>
-
     <!-- 搜索建议列表 -->
-    <div class="sugg-list" v-if="kw.length !== 0">
-      <div
-        class="sugg-item"
-        v-for="(str, index) in suggestList"
-        :key="index"
-        v-html="lightFn(str, kw)"
-        @click="suggestClickFn(str)"
-      ></div>
-    </div>
+<div class="sugg-list" v-if="kw.length !== 0">
+    <div class="sugg-item" 
+    v-for="(str, index) in suggestList" :key="index"
+     v-html="lightFn(str)"
+     @click="suggesClickFn(str)"
+    >{{str}}</div>
+</div>
 
-    <!-- 搜索历史 -->
-    <div class="search-history" v-else>
-      <!-- 标题 -->
-      <van-cell title="搜索历史">
+<!-- 搜索历史 -->
+<div class="search-history" v-else >
+    <!-- 标题 -->
+    <van-cell title="搜索历史">
         <!-- 使用 right-icon 插槽来自定义右侧图标 -->
         <template #right-icon>
-          <van-icon name="delete" class="search-icon" @click="clearFn"/>
+			<van-icon name="delete" class="search-icon"  @click="deletehistory"/>
         </template>
-      </van-cell>
+    </van-cell>
 
-      <!-- 历史列表 -->
-      <div class="history-list">
-        <span class="history-item" v-for="(str, index) in history"
+    <!-- 历史列表 -->
+    <div class="history-list"  >
+        <span class="history-item" 
+        v-for="(str,index) in history" 
         :key="index"
         @click="historyClickFn(str)"
-        >{{ str }}</span>
-      </div>
+        >{{str}}</span>
     </div>
+</div>
   </div>
+  
 </template>
+
 <script>
-// 目标1: 跳转到搜索结果页面
-// 1. 输入框回车 -> 输入框字  -> 搜索结果页
-// 2. 点击联想菜单 -> 点击文字 -> 搜索结果页
-// 3. 点击历史记录 -> 点击文字 -> 搜索结果页
-import { suggestListAPI } from '@/api'
-import { setStorage, getStorage } from '@/utils/storage'
+import {suggestListAPI} from '../../api/index'
 export default {
-  name: 'Search',
   data () {
     return {
-      kw: '', // 搜索关键字
-      timer: null, // 防抖的定时器
-      suggestList: [], // 联想建议列表文字数组
-      history: JSON.parse(getStorage('his')) || [] // 搜索历史
+      kw: '',// 搜索关键字
+      timer:null, // 防抖, 用的定时器
+      suggestList: [],// 建议关键字列表
+      history: JSON.parse(localStorage.getItem('his'))||[]//搜索历史
     }
   },
   methods: {
-    // 输入框 - 内容实时改变触发事件方法
-    inputFn () {
-      // 防抖: 延时执行逻辑代码, 事件再次触发时, 清除上一个定时器
+    inpuFn(){
       clearTimeout(this.timer)
-
-      if (this.kw.length === 0) {
-        this.suggestList = []
-      } else {
-        this.timer = setTimeout(async () => {
-          const res = await suggestListAPI({
-            keywords: this.kw
-          })
-          console.log(res)
-          this.suggestList = res.data.data.options
-        }, 300)
-      }
+       if (this.kw.length===0) {
+          this.suggestList=[]
+        }else{
+          this.timer=setTimeout(async () => {   
+        // 防止空内容触发下面逻辑
+         const res = await suggestListAPI({
+         q:this.kw
+         })
+        this.suggestList=res.data.data.options||[]
+      }, 500);
+        }
+    
     },
     // 专门处理字符串高亮关键字
     lightFn (originStr, target) {
@@ -120,56 +99,59 @@ export default {
       // 坑: 路由跳转, 在watch之前执行, 所以我们要让路由跳转, 来一个定时器包裹, 让跳转最后执行
       setTimeout(() => {
         this.$router.push({
-          path: `/search_result/${theKw}`
+          path: `/Search/${theKw}`
         })
       }, 0)
     },
-    // 输入框-搜索事件
-    searchFn () {
-      if (this.kw.length > 0) {
-        // 搜索关键字 - 保存到数组里
-        this.history.push(this.kw)
-        this.moveFn(this.kw)
-      }
+    // 关键词的点击跳转
+    SearchTo(){
+     if (this.kw.length>0) {
+        this.history.push(this.kw) // 保存搜索关键字
+      console.log(this.history);
+          this.moveFn(this.kw)
+     }
+
     },
-    // 联想菜单-点击事件
-    suggestClickFn (str) {
-      // 搜索关键字 - 保存到数组里
-      this.history.push(str)
-      this.moveFn(str)
+    // 联想菜单的跳转
+    suggesClickFn(str){
+      this.history.push(this.kw) // 保存搜索关键字
+         this.moveFn(str)
+
     },
-    // 搜索历史-点击事件
-    historyClickFn (str) {
-      this.moveFn(str)
+    // 历史记录跳转
+    historyClickFn(str){
+       this.moveFn(str)
+
     },
-    // 清除历史记录
-    clearFn () {
-      this.history = []
+    // 删除历史记录
+    deletehistory(){
+        this.history=[]
+    
     }
+   
   },
-  // watch侦听器使用
-  watch: {
-    history: { // 历史记录数组的改变
+   watch:{
+      // 监听记录数组的改变
+      history:{
       deep: true,
-      handler () {
-        // 立刻覆盖式的保存到本地
-        // ES6新增了2种引用类型(以前 Array, Object), (新增: Set Map)
-        // Set: 无序不重复的value集合体 (无下角标)
+       handler(){
+          // Set: 无序不重复的value集合体 (无下角标)
         // 特点: 你传入的数组类型, 如果有重复元素, 会自动清理掉重复元素, 返回无重复的Set对象
-        // 注意: 如果值是对象比较的是对象内存地址
-        const theSet = new Set(this.history)
-        // Set类型对象 -> 转回 -> Array数组类型
-        const arr = Array.from(theSet)
-        setStorage('his', JSON.stringify(arr))
+        const theSet =new Set(this.history)
+        console.log(theSet);
+        // Set对象转回
+        // const arr = Array.from(theSet)
+        const arr=[...theSet]
+          localStorage.setItem('his',JSON.stringify(arr))
+         }
       }
     }
-  }
 }
 </script>
 
 <style scoped lang="less">
 .search-header {
-  height: 46px;
+  height: 100px;
   display: flex;
   align-items: center;
   background-color: #007bff;
@@ -182,9 +164,9 @@ export default {
   .van-search {
     flex: 1;
   }
-}
+  /*搜索建议列表样式 */
 
-/*搜索建议列表样式 */
+}
 .sugg-list {
   .sugg-item {
     padding: 0 15px;

@@ -6,10 +6,10 @@
       <van-cell>
         <!-- 使用 title 插槽来自定义标题 -->
         <template #icon>
-          <img :src="$store.state.userPhoto" alt="" class="avatar">
+          <img :src="User.photo" alt="" class="avatar" />
         </template>
         <template #title>
-          <span class="username">{{ userObj.name }}</span>
+          <span class="username">{{ User.name }}</span>
         </template>
         <template #label>
           <van-tag color="#fff" text-color="#007bff">申请认证</van-tag>
@@ -18,15 +18,15 @@
       <!-- 动态、关注、粉丝 -->
       <div class="user-data">
         <div class="user-data-item">
-          <span>{{ userObj.art_count }}</span>
+          <span>{{ User.art_count }}</span>
           <span>动态</span>
         </div>
         <div class="user-data-item">
-          <span>{{ userObj.follow_count }}</span>
+          <span>{{ User.follow_count }}</span>
           <span>关注</span>
         </div>
         <div class="user-data-item">
-          <span>{{ userObj.fans_count }}</span>
+          <span>{{ User.fans_count }}</span>
           <span>粉丝</span>
         </div>
       </div>
@@ -34,51 +34,61 @@
 
     <!-- 操作面板 -->
     <van-cell-group class="action-card">
-      <van-cell icon="edit" title="编辑资料" is-link to="/user_edit"/>
-      <van-cell icon="chat-o" title="小思同学" is-link to="/chat"/>
-      <van-cell icon="warning-o" title="退出登录" is-link @click="quitFn"/>
+      <van-cell icon="edit" title="编辑资料" is-link to="/user_editor" />
+      <van-cell icon="chat-o" title="小思同学" is-link />
+      <van-cell icon="warning-o" title="退出登录" is-link @click="Quit" />
     </van-cell-group>
   </div>
 </template>
 
 <script>
-import { getUserInfoAPI } from '@/api'
-import { Dialog } from 'vant'
-import { removeToken } from '@/utils/token.js'
-import { mapMutations } from 'vuex'
+import { userInfoAPI } from "../../../api/index";
+import { Dialog, Notify } from "vant";
+import{removeToken} from '../../../utils/token'
+import UserEdit from './UserEdit'
 export default {
-  data () {
+name:'User',
+components:{
+ UserEdit  
+ 
+ },
+  data() {
     return {
-      userObj: {} // 用户对象
-    }
+      User: {},
+    };
   },
-  async created () {
-    const res = await getUserInfoAPI()
-    console.log(res)
-    this.userObj = res.data.data
-    // this.$store.commit('SET_USERPHOTO', this.userObj.photo)
-    this.SET_USERPHOTO(this.userObj.photo)
+
+  mounted() {
+    this.getUserInfo();
   },
   methods: {
-    ...mapMutations(['SET_USERPHOTO']),
-    // 退出方法
-    quitFn () {
+    async getUserInfo() {
+      const res = await userInfoAPI();
+      this.User = res.data.data;
+    },
+    Quit() {
+      // 当点击的时候弹出确认框是否退出登录,退出登录就进入下一步
+      // 清除本地的token,跳转到登录的路由
       Dialog.confirm({
-        title: '是否退出登录',
-        message: '这就走了?不爱我了吗?'
-      }).then(() => { // 用户点击"确认"选项 -> 内部resolve触发then
-        // 业务(思路/方向)
-        removeToken()
-        this.$router.replace('/login')
-        // on confirm
-      }).catch(() => { // 用户点击"取消"选项 -> 内部reject触发catch
-        // on cancel
+        title: "退出登录",
+        message: "是否退出登录",
       })
-    }
-  }
-}
-// 主动退出 -> 用户点击退出, 清空token, 强制replace切换登录页
-// 被动退出 -> 把token值传后台, 后台返回401 -> 响应拦截器发现401状态证明你身份过期 -> 强制进登录页
+        .then(() => {
+
+          Notify({ type: "success", message: "请重新登录" });
+          removeToken()
+          this.$router.replace('/login')
+        })
+        .catch(() => {
+          Notify({
+            message: "取消",
+            color: "#ad0000",
+            background: "#ffe1e1",
+          });
+        });
+    },
+  },
+};
 </script>
 
 <style scoped lang="less">

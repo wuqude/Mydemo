@@ -1,8 +1,24 @@
-import request from '@/utils/request.js'
+import request from "../utils/request"
 
+// 获取文章详情
 // 文章 - 获取详情
 export const detailAPI = ({ artId }) => request({
-  url: `/v1_0/articles/${artId}`
+    url: `/v1_0/articles/${artId}`
+  })
+
+// 用户 - 关注
+export const userFollowedAPI = ({ userId }) => request({
+  url: '/v1_0/user/followings',
+  method: 'POST',
+  data: {
+    target: userId
+  }
+})
+
+// 用户 - 取消关注
+export const userUnFollowedAPI = ({ userId }) => request({
+  url: `/v1_0/user/followings/${userId}`,
+  method: 'DELETE'
 })
 
 // 文章 - 点赞
@@ -51,6 +67,7 @@ export const commentDisLikingAPI = ({ comId }) => {
   })
 }
 
+
 // 文章- 评论 - 发布评论
 export const commentSendAPI = ({ id, content, art_id = null }) => {
   // 1. axios中, data请求体传参, 如果值为null是不会忽略这个参数的
@@ -71,18 +88,3 @@ export const commentSendAPI = ({ id, content, art_id = null }) => {
     data: obj
   })
 }
-
-// 用户 - 关注
-export const userFollowedAPI = ({ userId }) => request({
-  url: '/v1_0/user/followings',
-  method: 'POST',
-  data: {
-    target: userId
-  }
-})
-
-// 用户 - 取消关注
-export const userUnFollowedAPI = ({ userId }) => request({
-  url: `/v1_0/user/followings/${userId}`,
-  method: 'DELETE'
-})
